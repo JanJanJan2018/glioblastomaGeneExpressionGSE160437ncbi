@@ -1,0 +1,152 @@
+---
+title: "Glioma Oct2020 data NCBI"
+author: "Janis Corona"
+date: "11/5/2020"
+output: html_document
+---
+
+This study is taken from NCBI GEO data sets on gliomas, it was published Oct 2020 and is more recent to the date of this document. I want to explore the gene expression data that this study put together involving certain eukaryote enzymes in relation to glioma stem cells. The Access ID is <a href='https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE160437' target='blank'>GSE160437</a> for this study. As of the time of this documents start date, there was no published PubMed or similar document outlining this research.
+
+I was motivated to find out more about brain tumors that are cancerous after reading about a <a href='https://www.dailymail.co.uk/femail/article-8901279/Glioblastoma-brain-tumour-Tijen-Kuryuk-25-diagnosed-terminal-cancer-headaches.html' target='blank'>25 year old Australian dying of glioblastomas</a> about 5 days ago. The glioblastoma had a cyst that was removed but the glioma couldn't be and gave her less than 2 years to live. The article said that the glioma is supplied by a rich blood supply to grow from the brain blood barrier and that it couldn't be cut off because of angiogenesis where by it grows more capillaries to access that rich blood supply. Aside, in uterine tumors they also grow by angiogenesis and they can be cut off by injecting silicone plugs into their blood supply and making them atrophy, but the brain could lose function and kill the host I am assuming by doing this same method or procedure. 
+
+The research summary is as follows directly quoted from link above:
+- 'Series GSE160437		Query DataSets for GSE160437
+Status	Public on Oct 30, 2020
+Title	Piwil1 Regulates Glioma Stem Cell Maintenance and Glioblastoma Progression
+Organism	Homo sapiens
+Experiment type	Expression profiling by array
+Summary	Piwi proteins are a subfamily of Argonaute proteins that maintain germ cells in eukaryotes. However, the role of their human homologues in cancer stem cells and more broadly in cancer is poorly understood. Here, we report that the Piwi-like family members, including Piwil1 (Hiwi), are overexpressed in glioblastoma (GBM), with Piwil1 levels most frequently elevated. Piwil1 is enriched in glioma stem cells (GSCs) and helps to maintain their self-renewal. GSCs were transduces with control non-targeting shRNAs (shNT) and shPiwil1 (#1 and #2) and global gene expression was analyzed to identify Piwil1 downscream singalings.
+ 	
+Overall design	3832 GSCs were transduced with shNT or two shPiwil1 (#1 and #2) lentivirus. Each shRNA had four biological replicates.
+ 	
+Contributor(s)	Huang H
+Citation missing	Has this study been published? Please login to update or notify GEO.'
+
+
+I opened the files of the series text and soft family files of platform information on ID gene symbols to attach to the sample title name of each GSM sample ID to this series in Excel and saved each as a csv file. Its faster than using script to pull data for me.
+```{r}
+data <- read.csv('GSE160437_data_ID_Samples.csv',sep=',',header=T,
+                 na.strings=c('',' ','NA'))
+```
+
+```{r}
+IDs <- read.csv('GSE160437_GeneIDs_GPL28270.csv',sep=',',header=T,na.strings=c('',' ','NA'))
+head(IDs)
+```
+
+This file is a file used and created with a script to pull the genes associated as top genes in genecards.org with products humans use regularly or occasionally that could have epigenetic modifications to gene expression.
+```{r}
+bodyGenes <- read.csv('bodySystemsGenes_detailsMore.csv',sep=',',header=T,stringsAsFactors = F)
+head(bodyGenes)
+```
+
+Look at the data, and remove the GSM IDs and keep the sample titles as column or sample names of reference.
+```{r}
+head(data)
+```
+
+
+```{r}
+data2 <- read.csv('GSE160437_data_ID_Samples.csv',sep=',',header=T,
+                 na.strings=c('',' ','NA'), skip=1)
+head(data2)
+
+```
+
+
+```{r}
+colnames(data2)[2:13] <- colnames(data)[2:13]
+head(data2)
+```
+
+Combine Gene Symbols 'ORF' in IDs to data2 samples by 'ID' and 'ID_REF' respectively.
+```{r}
+DF <- merge(IDs,data2,by.x='ID',by.y='ID_REF')
+head(DF)
+```
+
+
+```{r}
+dim(DF)
+dim(bodyGenes)
+```
+
+
+```{r}
+DF2 <- merge(bodyGenes,DF,by.x='gene',by.y='ORF')
+dim(DF2)
+```
+
+
+```{r}
+head(DF2)
+```
+
+Lets review what we're looking at:
+Summary	Piwi proteins are a subfamily of Argonaute proteins that maintain germ cells in eukaryotes. However, the role of their human homologues in cancer stem cells and more broadly in cancer is poorly understood. Here, we report that the Piwi-like family members, including **Piwil1 (Hiwi), are overexpressed in glioblastoma (GBM)**, with Piwil1 levels most frequently elevated. Piwil1 is enriched in glioma stem cells (GSCs) and helps to maintain their self-renewal. GSCs were transduced with control non-targeting shRNAs (shNT) and shPiwil1 (#1 and #2) and global gene expression was analyzed to identify Piwil1 downstream signalings.
+
+Lets just see if we can see the glioblastomas are in fact showing overexpression of Piwil1 by getting the mean of those samples and getting the fold change of treated to non treated.
+```{r}
+colnames(DF)
+```
+There are three sets of samples for not treated, piwil1, and piwil2, with 4 replicates of each sample. We will get the means by sample group of not treated(columns 3-6), piwil1(columns 7-10), and piwil2(columns 11:14).
+
+```{r}
+piwil <- grep('PIWIL',DF$ORF)
+```
+
+The Piwil genes in the data is shown below
+```{r}
+PIWIL <- DF[piwil,]
+PIWIL
+```
+
+
+```{r}
+PIWIL$nt_mean <- apply(PIWIL[,3:6],1,mean)
+PIWIL$piwil1_mean <- apply(PIWIL[,7:10],1,mean)
+PIWIL$piwil2_mean <- apply(PIWIL[,11:14],1,mean)
+
+PIWIL[,c(2,15:17)]
+```
+
+Overall, if we look at the above table, we can see the PIWIL1 and PIWIL2 do have higher means than the non treated samples, but not for all as row 40790 shows a lower piwil2 mean than the non-treated mean. This is only looking at the corresponding piwil number to its number in the ORF column or gene identifier of which there are various entries, most likely due to copy number variations in the gene for this data.
+
+Lets add the fold change values to this short data table.
+```{r}
+PIWIL$FC_piwil1_nt <- PIWIL$piwil1_mean/PIWIL$nt_mean
+PIWIL$FC_piwil2_nt <- PIWIL$piwil2_mean/PIWIL$nt_mean
+PIWIL[c(2,4,6,7),c(2,18:19)]
+```
+
+Lets now, just look at our smaller data set of body system genes in our glioma data set to explore in Tableau.We will get the group means for not treated, treated with piwil1 and then with piwil2, and look at the fold change and also add in the differential expression of treated to non-treated.
+```{r}
+colnames(DF2)
+```
+
+```{r}
+DF2$nt_mean <- apply(DF2[,9:12],1,mean)
+DF2$piwil1_mean <- apply(DF2[,13:16],1,mean)
+DF2$piwil2_mean <- apply(DF2[,17:20],1,mean)
+
+head(DF2[,c(1,21:23)],10)
+```
+
+```{r}
+DF2$FC_piwil1_nt <- DF2$piwil1_mean/DF2$nt_mean
+DF2$FC_piwil2_nt <- DF2$piwil2_mean/DF2$nt_mean
+
+DF2$DE_piwil1_nt <- DF2$piwil1_mean-DF2$nt_mean
+DF2$DE_piwil2_nt <- DF2$piwil2_mean-DF2$nt_mean
+
+head(DF2[,c(1,21:27)],10)
+```
+
+The above table shows the fold change values of treated to not treated as a prepended 'FC' and the respective piwil number. It also shows the differential expression of the treated minus the non treated values of respected piwil number prepended with 'DE' in the column names. 
+We will see negative DE values if the treated value is lower than the non-treated value.
+
+Lets write this file out to explore in Tableau.
+```{r}
+write.csv(DF2,'gliomaFCsAndDEs.csv',row.names=F)
+```
+
